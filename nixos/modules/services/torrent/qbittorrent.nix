@@ -7,7 +7,7 @@
 }:
 let
   cfg = config.services.qbittorrent;
-  inherit (builtins) concatStringsSep isAttrs;
+  inherit (builtins) concatStringsSep isAttrs isString;
   inherit (lib)
     literalExpression
     getExe
@@ -16,8 +16,9 @@ let
     mkPackageOption
     mkIf
     maintainers
-    mapAttrsToList
     escape
+    collect
+    mapAttrsRecursive
     ;
   inherit (lib.types)
     str
@@ -32,13 +33,16 @@ let
       let
         sep = "=";
       in
-      k: v:
-      if isAttrs v then
-        concatStringsSep "\n" (
-          mapAttrsToList (k2: v2: "${escape [ sep ] "${k}\\${k2}"}${sep}${mkValueStringDefault { } v2}") v
-        )
-      else
-        mkKeyValueDefault { } sep k v;
+        k: v:
+        if isAttrs v then
+          concatStringsSep "\n"
+            (
+              collect
+                isString
+                (mapAttrsRecursive (path: value: "${escape [ sep ] (concatStringsSep "\\" ([ k ] ++ path))}${sep}${mkValueStringDefault {} value}") v)
+            )
+        else
+          mkKeyValueDefault { } sep k v;
   };
 in
 {
