@@ -33,21 +33,23 @@ let
       let
         sep = "=";
       in
-        k: v:
-        if isAttrs v then
-          concatStringsSep "\n"
-            (
-              collect
-                isString
-                (mapAttrsRecursive (path: value: "${escape [ sep ] (concatStringsSep "\\" ([ k ] ++ path))}${sep}${mkValueStringDefault {} value}") v)
-            )
-        else
-          mkKeyValueDefault { } sep k v;
+      k: v:
+      if isAttrs v then
+        concatStringsSep "\n" (
+          collect isString (
+            mapAttrsRecursive (
+              path: value:
+              "${escape [ sep ] (concatStringsSep "\\" ([ k ] ++ path))}${sep}${mkValueStringDefault { } value}"
+            ) v
+          )
+        )
+      else
+        mkKeyValueDefault { } sep k v;
   };
 in
 {
   options.services.qbittorrent = {
-    enable = mkEnableOption "qbittorrent, BitTorrent client.";
+    enable = mkEnableOption "qbittorrent, BitTorrent client";
 
     package = mkPackageOption pkgs "qbittorrent-nox" { };
 
@@ -69,10 +71,7 @@ in
       description = "the path passed to qbittorrent via --profile.";
     };
 
-    openFirewall = mkOption {
-      default = false;
-      description = "Opens both the webuiPort and torrentPort options ports as tcp in the firewall";
-    };
+    openFirewall = mkEnableOption "Opens both the webuiPort and torrentPort options ports as tcp in the firewall";
 
     webuiPort = mkOption {
       default = 8080;
@@ -89,8 +88,9 @@ in
       type = unspecified;
       description = ''
         Free-form settings mapped to the `qBittorrent.conf` file in the profile.
-        Refer to <https://github.com/qbittorrent/qBittorrent/wiki/Explanation-of-Options-in-qBittorrent>
-        you will probably want to run qBittorrent locally once to use the webui to generate the password before setting anything here.
+        Refer to [Explanation-of-Options-in-qBittorrent](https://github.com/qbittorrent/qBittorrent/wiki/Explanation-of-Options-in-qBittorrent)
+        the Password_PBKDF2 format is oddly unique, you will likely want to use [this tool](https://codeberg.org/feathecutie/qbittorrent_password) to generate the format.
+        alternatively you can run qBittorrent independently first and use its webUI to generate the format.
       '';
       example = literalExpression ''
         {
@@ -139,12 +139,14 @@ in
           Type = "simple";
           User = cfg.user;
           Group = cfg.group;
-          ExecStart = utils.escapeSystemdExecArgs ([
+          ExecStart = utils.escapeSystemdExecArgs (
+            [
               (getExe cfg.package)
               "--profile=${cfg.profileDir}"
               "--webui-port=${toString cfg.webuiPort}"
             ]
-            ++ lib.optional (cfg.torrentingPort != null) "--torrenting-port=${toString cfg.torrentingPort}");
+            ++ lib.optional (cfg.torrentingPort != null) "--torrenting-port=${toString cfg.torrentingPort}"
+          );
           TimeoutStopSec = 1800;
 
           # https://github.com/qbittorrent/qBittorrent/pull/6806#discussion_r121478661
@@ -191,9 +193,10 @@ in
       };
       groups = mkIf (cfg.group == "qbittorrent") { qbittorrent = { }; };
     };
-    networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall ([
-      cfg.webuiPort
-    ] ++ lib.optional (cfg.torrentingPort != null) cfg.torrentingPort);
+
+    networking.firewall.allowedTCPPorts = mkIf cfg.openFirewall (
+      [ cfg.webuiPort ] ++ lib.optional (cfg.torrentingPort != null) cfg.torrentingPort
+    );
   };
   meta.maintainers = with maintainers; [ nu-nu-ko ];
 }
