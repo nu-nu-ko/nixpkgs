@@ -71,7 +71,7 @@ in
       description = "the path passed to qbittorrent via --profile.";
     };
 
-    openFirewall = mkEnableOption "Opens both the webuiPort and torrentPort options ports as tcp in the firewall";
+    openFirewall = mkEnableOption "opening both the webuiPort and torrentPort over TCP in the firewall";
 
     webuiPort = mkOption {
       default = 8080;
@@ -198,5 +198,5 @@ in
       [ cfg.webuiPort ] ++ lib.optional (cfg.torrentingPort != null) cfg.torrentingPort
     );
   };
-  meta.maintainers = with maintainers; [ nu-nu-ko ];
+  meta.maintainers = with maintainers; [ fsnkty ];
 }
